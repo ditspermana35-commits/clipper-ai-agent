@@ -2,28 +2,16 @@ const videoInput = document.getElementById('videoInput');
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
 const statusText = document.getElementById('statusText');
-
 const timestampEl = document.getElementById('timestamp');
 const hookEl = document.getElementById('hook');
 const headlineEl = document.getElementById('headline');
 const captionEl = document.getElementById('caption');
-
 const exportBtn = document.getElementById('exportBtn');
 const downloadBtn = document.getElementById('downloadBtn');
 const copyCaptionBtn = document.getElementById('copyCaptionBtn');
-
 let startTime = 0;
 let clipDuration = 30;
-
-// Bank Data Teks Variasi Caption Bahasa Inggris (US) untuk Copy-Paste Deskripsi Postingan
-const captions = [
-    `You won't believe what happened here! 😱🔥\n\nWatch closely from start to finish.\n\n#gaming #highlight #goldenmoment #viral #clips`,
-    `This is easily the craziest moment of the week! 🚀⚡\n\nCheck out this epic highlight.\n\n#shorts #reels #viralvideo #trending #epic`,
-    `Did that actually just happen?! 😳🔥\n\nDrop a comment if you saw that coming!\n\n#foryou #fyp #clip #gamingmoments #unbelievable`,
-    `Absolute perfection in one clip! 🧠🎯\n\nShare this with a friend who needs to see it.\n\n#bestclips #viral #gameplay #mindblown #explore`,
-    `This moment deserves to go down in history! 🏆💥\n\nRate this play from 1 to 10 below.\n\n#trending #shorts #epicmoments #insane #foryoupage`,
-    `I still can't get over how insane this was! 🤯🔥\n\nFollow for more daily epic highlights.\n\n#foryou #viral #omg #clips #highlight`
-];
+let detectedClips = [];
 
 function formatTime(seconds) {
     const m = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -46,41 +34,102 @@ function getSupportedMimeType() {
     return '';
 }
 
+// Bank Data Content Strategy Engine (Lokal / No API)
+const STRATEGY_BANK = [
+    {
+        headline: "1 HP AND A DREAM OR GAME OVER? 💀",
+        hooks: [
+            "HOOK AGGRESSIVE A: 1 HP AND A DREAM OR GAME OVER? 💀",
+            "HOOK AGGRESSIVE B: HE ACTUALLY THOUGHT HE HAD ME HERE 🔥",
+            "HOOK ELEGANT A: When every single bullet decides your fate... 🎯",
+            "HOOK ELEGANT B: The most stressful 1v1 in history 🤫"
+        ],
+        captions: [
+            "CAPTION A (DRAMA / ENGAGEMENT BAIT):\n1v1 for the whole tournament and my heart was literally pounding 💀\n\nWould you have pushed or held the angle here?\nDrop your rank in the comments down below! 👇\n\n#gaming #clutch #valorant #fps #viral",
+            "CAPTION B (SHOCK / HIGH-SAVEABILITY):\nHe really thought he had this round secured 🔥\n\nSave this clip to learn how to hold calm under pressure in 1v1s!\nTag a friend who always whiffs these shots 👇\n\n#gaminghighlights #clutchmoment #pcgaming #gamer #esports"
+        ]
+    },
+    {
+        headline: "NEVER CELEBRATE TOO EARLY UNLESS... 😤",
+        hooks: [
+            "HOOK AGGRESSIVE A: NEVER CELEBRATE TOO EARLY UNLESS... 😤",
+            "HOOK AGGRESSIVE B: THE REACTION WHEN YOU FINALLY WIN 🏆",
+            "HOOK ELEGANT A: Pure adrenaline in a single round... ⚡",
+            "HOOK ELEGANT B: This feeling after winning a 1v1 tournament round 💯"
+        ],
+        captions: [
+            "CAPTION A (DRAMA / ENGAGEMENT BAIT):\nThe reaction says it all... absolute pure adrenaline 😤\n\nHow do you react when you win a high stakes round?\nTell me your wild gamer reaction stories down below 👇\n\n#gamingcommunity #streamer #gamerreaction #setup #viral",
+            "CAPTION B (SHOCK / HIGH-SAVEABILITY):\nWhen the stress finally leaves your body after a clutch 🏆\n\nSave this for motivation before your next ranked match!\nShare this with your duo who needs a win today 👇\n\n#gamemoments #gaminghighlights #esports #shorts #reels"
+        ]
+    },
+    {
+        headline: "WE BOTH ALMOST THREW THIS MATCH 😭",
+        hooks: [
+            "HOOK AGGRESSIVE A: WE BOTH ALMOST THREW THIS MATCH 😭",
+            "HOOK AGGRESSIVE B: TOURNAMENT MATCH THAT ALMOST BROKE US 💥",
+            "HOOK ELEGANT A: The nerves after a high-stakes tournament round... 💔",
+            "HOOK ELEGANT B: Submitting the win after an intense match 📝"
+        ],
+        captions: [
+            "CAPTION A (DRAMA / ENGAGEMENT BAIT):\nBoth of us were shaking during this tournament match 😭\n\nWho do you think made the bigger mistake in this round?\nComment your match breakdown below 👇\n\n#esports #tournament #gaminglife #pcgamer #clutch",
+            "CAPTION B (SHOCK / HIGH-SAVEABILITY):\nSubmitting the 1-0 tournament win after nearly throwing 💥\n\nBookmark this clip for tournament mindset tips!\nTag your tournament partner who gets nervous 👇\n\n#competitivegaming #gamer #gamingcontent #streamer #foryou"
+        ]
+    }
+];
+
+// Fungsi Memecah Video Menjadi 3 Klip Secara Otomatis
+function generateLocalContentStrategy(totalDuration) {
+    statusText.innerText = "⚡ Analyzing Video Duration & Generating Content Strategy...";
+
+    const clipLen = Math.min(25, Math.floor(totalDuration / 3));
+    detectedClips = [];
+
+    for (let i = 0; i < 3; i++) {
+        const start = i * clipLen;
+        const end = (i === 2) ? Math.min(start + clipLen, totalDuration) : start + clipLen;
+        const strategy = STRATEGY_BANK[i % STRATEGY_BANK.length];
+
+        detectedClips.push({
+            clipNumber: i + 1,
+            startTime: start,
+            endTime: end,
+            headline: strategy.headline,
+            hooks: strategy.hooks,
+            captions: strategy.captions
+        });
+    }
+
+    // Tampilkan Klip 1 secara otomatis
+    applyClipData(detectedClips[0]);
+    statusText.innerText = "✅ Strategy Generated! Clean 9:16 Video Ready to Export.";
+}
+
+function applyClipData(clip) {
+    startTime = clip.startTime;
+    clipDuration = clip.endTime - clip.startTime;
+
+    const randomHook = clip.hooks[Math.floor(Math.random() * clip.hooks.length)];
+    const randomCaption = clip.captions[Math.floor(Math.random() * clip.captions.length)];
+
+    timestampEl.innerText = `${formatTime(startTime)} - ${formatTime(clip.endTime)} (Clip ${clip.clipNumber} Length: ${Math.round(clipDuration)}s)`;
+    headlineEl.innerText = clip.headline;
+    hookEl.innerText = randomHook;
+    captionEl.innerText = `${randomCaption}\n\nTime Stamp: ${formatTime(startTime)} - ${formatTime(clip.endTime)}`;
+
+    exportBtn.disabled = false;
+    copyCaptionBtn.disabled = false;
+}
+
 videoInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
     const url = URL.createObjectURL(file);
     video.src = url;
-    statusText.innerText = "⏳ Analyzing Video & Extracting Golden Moment...";
+    statusText.innerText = "⏳ Loading Video...";
 
     video.onloadedmetadata = () => {
-        const totalDuration = video.duration;
-
-        // Otomatis tentukan potongan video 30 detik
-        if (totalDuration > 30) {
-            startTime = Math.floor(totalDuration * 0.3);
-            clipDuration = 30;
-        } else {
-            startTime = 0;
-            clipDuration = totalDuration;
-        }
-
-        const endTime = Math.min(startTime + clipDuration, totalDuration);
-
-        // Ambil caption acak untuk kebutuhan salin deskripsi postingan
-        const randomCaption = captions[Math.floor(Math.random() * captions.length)];
-
-        // Update UI Web PWA
-        timestampEl.innerText = `${formatTime(startTime)} - ${formatTime(endTime)} (Clip Length: ${Math.round(clipDuration)}s)`;
-        headlineEl.innerText = "Clean Video Mode (No Overlay Text)";
-        hookEl.innerText = "Ready to Export";
-        
-        captionEl.innerText = `${randomCaption}\n\nTime Stamp: ${formatTime(startTime)} - ${formatTime(endTime)}`;
-
-        statusText.innerText = "✅ Golden Moment Found! Ready to Trim & Export.";
-        exportBtn.disabled = false;
-        copyCaptionBtn.disabled = false;
+        generateLocalContentStrategy(video.duration);
     };
 });
 
@@ -89,7 +138,7 @@ copyCaptionBtn.addEventListener('click', () => {
     alert("Caption copied to clipboard!");
 });
 
-// Setup Web Audio API Global untuk Mencegah Leak Memori RAM
+// Setup Web Audio API
 let audioCtx = null;
 let source = null;
 let dest = null;
@@ -98,35 +147,30 @@ exportBtn.addEventListener('click', async () => {
     exportBtn.disabled = true;
     statusText.innerText = "🎥 Processing 9:16 Clean Video + Audio... Please wait.";
 
-    // Unmute video sebelum merekam
     video.muted = false;
 
-    // Paksa Canvas ke Format Vertikal 9:16 (720x1280) untuk TikTok/Reels/Shorts
+    // Render Canvas 9:16 Vertikal (720x1280)
     const ctx = canvas.getContext('2d');
-    canvas.width = 720;   // Lebar 720px (Aman dari crash RAM HP)
-    canvas.height = 1280; // Tinggi 1280px (Rasio 9:16)
+    canvas.width = 720;
+    canvas.height = 1280;
 
-    // Hitung posisi video agar pas di tengah (Center Fit / Letterbox)
     const videoAspect = (video.videoWidth || 1280) / (video.videoHeight || 720);
     const canvasAspect = canvas.width / canvas.height;
     
     let drawWidth, drawHeight, drawX, drawY;
 
     if (videoAspect > canvasAspect) {
-        // Video Landscape
         drawWidth = canvas.width;
         drawHeight = canvas.width / videoAspect;
         drawX = 0;
         drawY = (canvas.height - drawHeight) / 2;
     } else {
-        // Video Vertikal
         drawWidth = canvas.height * videoAspect;
         drawHeight = canvas.height;
         drawX = (canvas.width - drawWidth) / 2;
         drawY = 0;
     }
 
-    // Setup Web Audio API
     if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         source = audioCtx.createMediaElementSource(video);
@@ -167,9 +211,8 @@ exportBtn.addEventListener('click', async () => {
         downloadBtn.href = downloadUrl;
         downloadBtn.download = fileName;
         downloadBtn.hidden = false;
-        downloadBtn.innerText = `⬇️ CLICK HERE TO DOWNLOAD FILE (${fileExt.toUpperCase()})`;
+        downloadBtn.innerText = `⬇️ DOWNLOAD CLEAN CLIP (${fileExt.toUpperCase()})`;
 
-        // Auto Download
         const a = document.createElement('a');
         a.style.display = 'none';
         a.href = downloadUrl;
@@ -193,11 +236,9 @@ exportBtn.addEventListener('click', async () => {
             return;
         }
 
-        // 1. Clear Canvas Background (Hitam)
+        // Render video murni tanpa overlay teks di canvas
         ctx.fillStyle = "#000000";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // 2. Murni merekam gambar video di tengah TANPA overlay teks/box apa pun
         ctx.drawImage(video, drawX, drawY, drawWidth, drawHeight);
 
         requestAnimationFrame(drawFrame);
