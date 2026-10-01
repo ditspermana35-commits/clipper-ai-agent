@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clipper AI Agent Pro</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0d0d0d">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app">
+    <h1>🎬 Clipper AI Agent Pro</h1>
+    <p class="subtitle">Auto Golden Moment, Caption & Direct Download</p>
+
+    <label class="upload">
+        📁 Pilih Video Long-Form (Gameplay / Podcast)
+        <input type="file" id="videoInput" accept="video/*">
+    </label>
+
+    <div class="video-box">
+        <video id="video" controls playsinline muted></video>
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <div id="statusText" class="status-box">Siap memuat video...</div>
+
+    <!-- Informasi Analisis AI -->
+    <div class="info">
+        <div class="card highlight">
+            <span>⏱️ GOLDEN MOMENT (TIMESTAMP)</span>
+            <strong id="timestamp">Menunggu video...</strong>
+        </div>
+
+        <div class="card">
+            <span>🎣 HOOK (3 DETIK PERTAMA)</span>
+            <strong id="hook">Menunggu video...</strong>
+        </div>
+
+        <div class="card">
+            <span>📰 JUDUL UTAMA (OVERLAY)</span>
+            <strong id="headline">Menunggu video...</strong>
+        </div>
+
+        <div class="card">
+            <span>📝 CAPTION & HASHTAGS</span>
+            <div id="caption" class="caption-box">Menunggu analisis...</div>
+            <button id="copyCaptionBtn" class="secondary-btn" disabled>📋 Salin Caption</button>
+        </div>
+    </div>
+
+    <!-- Tombol Ekspor & Otomatis Download -->
+    <button id="exportBtn" disabled>
+        ⚡ Potong & Langsung Unduh Klip
+    </button>
+
+    <!-- Link Download Cadangan -->
+    <a id="downloadBtn" class="download" hidden>
+        ⬇️ Klik di sini jika unduhan tidak berjalan otomatis
+    </a>
+</div>
+
+<script src="script.js"></script>
+</body>
+  </html>
+  
