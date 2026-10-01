@@ -15,6 +15,44 @@ const copyCaptionBtn = document.getElementById('copyCaptionBtn');
 let startTime = 0;
 let clipDuration = 30;
 
+// Bank Data Teks Variasi Bahasa Inggris (US)
+const headlines = [
+    "Crazy Moment Caught on Camera 🔥",
+    "This Broke The Internet Today 😱",
+    "Wait Until You See The End ⚡",
+    "Unbelievable Moment You Missed! 🚀",
+    "Top Highlight of The Day 🎮",
+    "Nobody Expected This To Happen! 🤯",
+    "Pure Intelligence On Display 🧠",
+    "This Skill Is On Another Level! 🎯",
+    "Absolute Chaos In 4K 💀",
+    "The Luckiest Shot Ever Made! 🍀",
+    "This Changed Everything! 💣",
+    "When Everything Goes According To Plan ✨"
+];
+
+const hooks = [
+    "DON'T SKIP! THIS IS UNBELIEVABLE 😱",
+    "WATCH UNTIL THE END FOR THE TWIST! 🔥",
+    "ARE YOU SEEING THIS RIGHT NOW?! 😳",
+    "YOU NEED TO SEE THIS BEFORE IT GETS DELETED ⚡",
+    "THE ENDING WILL BLOW YOUR MIND! 🤯",
+    "WAIT FOR THE CRAZY FINALE! 💥",
+    "NO WAY THIS ACTUALLY JUST HAPPENED... 💀",
+    "LOOK CLOSELY OR YOU MIGHT MISS IT 👁️",
+    "1 IN A MILLION MOMENT! 🏆",
+    "THIS IS WHY YOU NEVER GIVE UP 💪"
+];
+
+const captions = [
+    `You won't believe what happened here! 😱🔥\n\nWatch closely from start to finish.\n\n#gaming #highlight #goldenmoment #viral #clips #foryou`,
+    `This is easily the craziest moment of the week! 🚀⚡\n\nCheck out this epic highlight.\n\n#shorts #reels #viralvideo #trending #epic`,
+    `Did that actually just happen?! 😳🔥\n\nDrop a comment if you saw that coming!\n\n#foryou #fyp #clip #gamingmoments #unbelievable`,
+    `Absolute perfection in one clip! 🧠🎯\n\nShare this with a friend who needs to see it.\n\n#bestclips #viral #gameplay #mindblown #explore`,
+    `This moment deserves to go down in history! 🏆💥\n\nRate this play from 1 to 10 below.\n\n#trending #shorts #epicmoments #insane #foryoupage`,
+    `I still can't get over how insane this was! 🤯🔥\n\nFollow for more daily epic highlights.\n\n#foryou #viral #omg #clips #highlight`
+];
+
 function formatTime(seconds) {
     const m = Math.floor(seconds / 60).toString().padStart(2, '0');
     const s = Math.floor(seconds % 60).toString().padStart(2, '0');
@@ -57,12 +95,18 @@ videoInput.addEventListener('change', (e) => {
 
         const endTime = Math.min(startTime + clipDuration, totalDuration);
 
-        // Update UI dengan teks Bahasa Inggris
+        // Pilih Headline, Hook, dan Caption secara acak (Random)
+        const randomHeadline = headlines[Math.floor(Math.random() * headlines.length)];
+        const randomHook = hooks[Math.floor(Math.random() * hooks.length)];
+        const randomCaption = captions[Math.floor(Math.random() * captions.length)];
+
+        // Update UI
         timestampEl.innerText = `${formatTime(startTime)} - ${formatTime(endTime)} (Clip Length: ${Math.round(clipDuration)}s)`;
-        hookEl.innerText = "DON'T SKIP! THIS IS UNBELIEVABLE 😱";
-        headlineEl.innerText = "Crazy Moment Caught on Camera 🔥";
+        headlineEl.innerText = randomHeadline;
+        hookEl.innerText = randomHook;
         
-        captionEl.innerText = `You won't believe what happened here! 😱🔥\n\nWatch from ${formatTime(startTime)} until the end.\n\n#gaming #highlight #goldenmoment #viral #clips #foryou`;
+        // Gabungkan teks acak caption dengan timestamp otomatis
+        captionEl.innerText = `${randomCaption}\n\nTime Stamp: ${formatTime(startTime)} - ${formatTime(endTime)}`;
 
         statusText.innerText = "✅ Golden Moment Found! Ready to Trim & Download.";
         exportBtn.disabled = false;
@@ -75,7 +119,7 @@ copyCaptionBtn.addEventListener('click', () => {
     alert("Caption copied to clipboard!");
 });
 
-// PENTING: Variabel AudioCtx di luar agar tidak terduplikasi tiap klik
+// Variabel AudioContext Global
 let audioCtx = null;
 let source = null;
 let dest = null;
@@ -84,15 +128,18 @@ exportBtn.addEventListener('click', async () => {
     exportBtn.disabled = true;
     statusText.innerText = "🎥 Processing video & audio recording... Please wait.";
 
-    // 1. Wajib aktifkan audio video sebelum merekam
+    // 1. Aktifkan audio video sebelum merekam
     video.muted = false;
 
-    // Set ukuran canvas presisi sesuai video asli
+    // Set ukuran canvas dengan pembatas skala agar RAM HP tidak kehabisan memori (mencegah Aw, Snap!)
     const ctx = canvas.getContext('2d');
-    canvas.width = video.videoWidth || 1280;
-    canvas.height = video.videoHeight || 720;
+    const maxWidth = 1280;
+    const scaleFactor = Math.min(1, maxWidth / (video.videoWidth || 1280));
 
-    // 2. Setup Web Audio API dengan penanganan Resume (Wajib untuk HP)
+    canvas.width = (video.videoWidth || 1280) * scaleFactor;
+    canvas.height = (video.videoHeight || 720) * scaleFactor;
+
+    // 2. Setup Web Audio API
     if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         source = audioCtx.createMediaElementSource(video);
@@ -105,7 +152,7 @@ exportBtn.addEventListener('click', async () => {
         await audioCtx.resume();
     }
 
-    // Ambil track visual dari Canvas & track audio dari Web Audio API
+    // Ambil track visual Canvas & track audio Web Audio API
     const canvasStream = canvas.captureStream(30);
     const combinedStream = new MediaStream([
         ...canvasStream.getVideoTracks(),
@@ -163,14 +210,14 @@ exportBtn.addEventListener('click', async () => {
         // 1. Draw Gambar Video
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        // 2. Skala Teks Overlay Bahasa Inggris
+        // 2. Skala Teks Overlay
         const scale = canvas.width / 1280;
         const boxHeight = 80 * scale;
         const boxY = 20 * scale;
         const boxWidth = canvas.width * 0.7;
         const boxX = (canvas.width - boxWidth) / 2;
 
-        // Background Box Transparan Rapi
+        // Background Box Transparan
         ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
         ctx.beginPath();
         if (ctx.roundRect) {
@@ -180,13 +227,13 @@ exportBtn.addEventListener('click', async () => {
         }
         ctx.fill();
 
-        // English Headline Text
+        // English Headline Text (Hasil Acak)
         ctx.fillStyle = "#FFD700";
         ctx.font = `bold ${Math.round(22 * scale)}px sans-serif`;
         ctx.textAlign = "center";
         ctx.fillText(headlineEl.innerText, canvas.width / 2, boxY + (32 * scale));
 
-        // English Hook Subtitle Text
+        // English Hook Subtitle Text (Hasil Acak)
         ctx.fillStyle = "#FFFFFF";
         ctx.font = `bold ${Math.round(15 * scale)}px sans-serif`;
         ctx.fillText(hookEl.innerText, canvas.width / 2, boxY + (60 * scale));
