@@ -13,7 +13,7 @@ const downloadBtn = document.getElementById('downloadBtn');
 const copyCaptionBtn = document.getElementById('copyCaptionBtn');
 
 let startTime = 0;
-let clipDuration = 30; // Durasi potong otomatis (30 detik)
+let clipDuration = 30;
 
 function formatTime(seconds) {
     const m = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -21,21 +21,19 @@ function formatTime(seconds) {
     return `${m}:${s}`;
 }
 
-// Fungsi menentukan mimeType MP4 yang paling kompatibel di browser HP/PC
 function getSupportedMimeType() {
     const types = [
-        'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
-        'video/mp4;codecs=h264',
-        'video/mp4',
-        'video/webm;codecs=vp9',
-        'video/webm'
+        'video/webm;codecs=vp8,opus',
+        'video/webm;codecs=vp9,opus',
+        'video/webm',
+        'video/mp4'
     ];
     for (let type of types) {
         if (MediaRecorder.isTypeSupported(type)) {
             return type;
         }
     }
-    return 'video/webm';
+    return '';
 }
 
 videoInput.addEventListener('change', (e) => {
@@ -44,12 +42,11 @@ videoInput.addEventListener('change', (e) => {
 
     const url = URL.createObjectURL(file);
     video.src = url;
-    statusText.innerText = "⏳ Menganalisis Video & Deteksi Golden Moment...";
+    statusText.innerText = "⏳ Analyzing Video & Detecting Golden Moment...";
 
     video.onloadedmetadata = () => {
         const totalDuration = video.duration;
 
-        // Ambil potongan klip di area terbaik (30% dari total durasi)
         if (totalDuration > 30) {
             startTime = Math.floor(totalDuration * 0.3);
             clipDuration = 30;
@@ -60,93 +57,139 @@ videoInput.addEventListener('change', (e) => {
 
         const endTime = Math.min(startTime + clipDuration, totalDuration);
 
-        // Update UI
-        timestampEl.innerText = `${formatTime(startTime)} - ${formatTime(endTime)} (Durasi Klip: ${Math.round(clipDuration)}d)`;
-        hookEl.innerText = "JANGAN SKIP! MOMEN INI PARAH BANGET 😱";
-        headlineEl.innerText = "Detik-detik Aksi Gila Terjadi 🔥";
+        // Update UI dengan teks Bahasa Inggris
+        timestampEl.innerText = `${formatTime(startTime)} - ${formatTime(endTime)} (Clip Length: ${Math.round(clipDuration)}s)`;
+        hookEl.innerText = "DON'T SKIP! THIS IS UNBELIEVABLE 😱";
+        headlineEl.innerText = "Crazy Moment Caught on Camera 🔥";
         
-        captionEl.innerText = `Momen gila yang gak sengaja terekam! 😱🔥\n\nTonton dari detik ${formatTime(startTime)} sampai habis biar gak penasaran.\n\n#gaming #highlight #goldenmoment #viral #clips`;
+        captionEl.innerText = `You won't believe what happened here! 😱🔥\n\nWatch from ${formatTime(startTime)} until the end.\n\n#gaming #highlight #goldenmoment #viral #clips #foryou`;
 
-        statusText.innerText = "✅ Golden Moment Ditemukan! Siap Dipotong & Diunduh.";
+        statusText.innerText = "✅ Golden Moment Found! Ready to Trim & Download.";
         exportBtn.disabled = false;
         copyCaptionBtn.disabled = false;
     };
 });
 
-// Copy Caption ke Clipboard
 copyCaptionBtn.addEventListener('click', () => {
     navigator.clipboard.writeText(captionEl.innerText);
-    alert("Caption berhasil disalin!");
+    alert("Caption copied to clipboard!");
 });
 
-// Pemotongan & Otomatis Download Format MP4
+// PENTING: Variabel AudioCtx di luar agar tidak terduplikasi tiap klik
+let audioCtx = null;
+let source = null;
+let dest = null;
+
 exportBtn.addEventListener('click', async () => {
     exportBtn.disabled = true;
-    statusText.innerText = "🎥 Memotong klip video MP4 & menyiapkan unduhan...";
+    statusText.innerText = "🎥 Processing video & audio recording... Please wait.";
 
+    // 1. Wajib aktifkan audio video sebelum merekam
+    video.muted = false;
+
+    // Set ukuran canvas presisi sesuai video asli
     const ctx = canvas.getContext('2d');
-    canvas.width = video.videoWidth || 720;
-    canvas.height = video.videoHeight || 1280;
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+
+    // 2. Setup Web Audio API dengan penanganan Resume (Wajib untuk HP)
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        source = audioCtx.createMediaElementSource(video);
+        dest = audioCtx.createMediaStreamDestination();
+        source.connect(dest);
+        source.connect(audioCtx.destination);
+    }
+    
+    if (audioCtx.state === 'suspended') {
+        await audioCtx.resume();
+    }
+
+    // Ambil track visual dari Canvas & track audio dari Web Audio API
+    const canvasStream = canvas.captureStream(30);
+    const combinedStream = new MediaStream([
+        ...canvasStream.getVideoTracks(),
+        ...dest.stream.getAudioTracks()
+    ]);
 
     const mimeType = getSupportedMimeType();
-    const isMp4 = mimeType.includes('mp4');
-    const fileExt = isMp4 ? 'mp4' : 'webm';
+    let mediaRecorder;
+    try {
+        mediaRecorder = new MediaRecorder(combinedStream, mimeType ? { mimeType } : undefined);
+    } catch (err) {
+        mediaRecorder = new MediaRecorder(combinedStream);
+    }
 
-    const stream = canvas.captureStream(30);
-    const mediaRecorder = new MediaRecorder(stream, { mimeType: mimeType });
     const chunks = [];
-
-    mediaRecorder.ondataavailable = e => chunks.push(e.data);
+    mediaRecorder.ondataavailable = e => {
+        if (e.data && e.data.size > 0) chunks.push(e.data);
+    };
     
-    // Saat perekaman selesai, pemicu unduh otomatis langsung dijalankan
     mediaRecorder.onstop = () => {
-        const blob = new Blob(chunks, { type: mimeType });
+        const blob = new Blob(chunks, { type: mediaRecorder.mimeType || 'video/webm' });
         const downloadUrl = URL.createObjectURL(blob);
-        const fileName = `clipper-golden-moment-${Date.now()}.${fileExt}`;
+        const fileExt = (mediaRecorder.mimeType && mediaRecorder.mimeType.includes('mp4')) ? 'mp4' : 'webm';
+        const fileName = `clipper-hd-${Date.now()}.${fileExt}`;
         
         downloadBtn.href = downloadUrl;
         downloadBtn.download = fileName;
         downloadBtn.hidden = false;
+        downloadBtn.innerText = `⬇️ CLICK HERE TO DOWNLOAD FILE (${fileExt.toUpperCase()})`;
 
-        // Pemicu Unduh Otomatis
-        const autoDownloadLink = document.createElement('a');
-        autoDownloadLink.href = downloadUrl;
-        autoDownloadLink.download = fileName;
-        document.body.appendChild(autoDownloadLink);
-        autoDownloadLink.click();
-        document.body.removeChild(autoDownloadLink);
+        // Auto Download
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = downloadUrl;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => document.body.removeChild(a), 100);
 
-        statusText.innerText = `🎉 Klip format .${fileExt.toUpperCase()} berhasil dipotong & otomatis diunduh!`;
+        statusText.innerText = "🎉 Success! Video + Audio trimmed and auto-downloaded.";
         exportBtn.disabled = false;
     };
 
     video.currentTime = startTime;
     await video.play();
-    mediaRecorder.start();
+    mediaRecorder.start(1000);
 
     function drawFrame() {
         if (video.currentTime >= (startTime + clipDuration) || video.paused || video.ended) {
             video.pause();
-            mediaRecorder.stop();
+            if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
             return;
         }
 
-        // Render Frame & Overlay Text
+        // 1. Draw Gambar Video
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        // Background Box Overlay
-        ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-        ctx.fillRect(20, 40, canvas.width - 40, 90);
+        // 2. Skala Teks Overlay Bahasa Inggris
+        const scale = canvas.width / 1280;
+        const boxHeight = 80 * scale;
+        const boxY = 20 * scale;
+        const boxWidth = canvas.width * 0.7;
+        const boxX = (canvas.width - boxWidth) / 2;
 
-        // Header Text
+        // Background Box Transparan Rapi
+        ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+        ctx.beginPath();
+        if (ctx.roundRect) {
+            ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 10 * scale);
+        } else {
+            ctx.rect(boxX, boxY, boxWidth, boxHeight);
+        }
+        ctx.fill();
+
+        // English Headline Text
         ctx.fillStyle = "#FFD700";
-        ctx.font = "bold 28px sans-serif";
+        ctx.font = `bold ${Math.round(22 * scale)}px sans-serif`;
         ctx.textAlign = "center";
-        ctx.fillText(headlineEl.innerText, canvas.width / 2, 80);
+        ctx.fillText(headlineEl.innerText, canvas.width / 2, boxY + (32 * scale));
 
+        // English Hook Subtitle Text
         ctx.fillStyle = "#FFFFFF";
-        ctx.font = "bold 20px sans-serif";
-        ctx.fillText(hookEl.innerText, canvas.width / 2, 115);
+        ctx.font = `bold ${Math.round(15 * scale)}px sans-serif`;
+        ctx.fillText(hookEl.innerText, canvas.width / 2, boxY + (60 * scale));
 
         requestAnimationFrame(drawFrame);
     }
