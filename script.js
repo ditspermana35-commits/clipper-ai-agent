@@ -21,6 +21,23 @@ function formatTime(seconds) {
     return `${m}:${s}`;
 }
 
+// Fungsi menentukan mimeType MP4 yang paling kompatibel di browser HP/PC
+function getSupportedMimeType() {
+    const types = [
+        'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+        'video/mp4;codecs=h264',
+        'video/mp4',
+        'video/webm;codecs=vp9',
+        'video/webm'
+    ];
+    for (let type of types) {
+        if (MediaRecorder.isTypeSupported(type)) {
+            return type;
+        }
+    }
+    return 'video/webm';
+}
+
 videoInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -62,39 +79,44 @@ copyCaptionBtn.addEventListener('click', () => {
     alert("Caption berhasil disalin!");
 });
 
-// Pemotongan & Otomatis Download
+// Pemotongan & Otomatis Download Format MP4
 exportBtn.addEventListener('click', async () => {
     exportBtn.disabled = true;
-    statusText.innerText = "🎥 Memotong klip video & menyiapkan unduhan...";
+    statusText.innerText = "🎥 Memotong klip video MP4 & menyiapkan unduhan...";
 
     const ctx = canvas.getContext('2d');
     canvas.width = video.videoWidth || 720;
     canvas.height = video.videoHeight || 1280;
 
+    const mimeType = getSupportedMimeType();
+    const isMp4 = mimeType.includes('mp4');
+    const fileExt = isMp4 ? 'mp4' : 'webm';
+
     const stream = canvas.captureStream(30);
-    const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+    const mediaRecorder = new MediaRecorder(stream, { mimeType: mimeType });
     const chunks = [];
 
     mediaRecorder.ondataavailable = e => chunks.push(e.data);
     
     // Saat perekaman selesai, pemicu unduh otomatis langsung dijalankan
     mediaRecorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'video/webm' });
+        const blob = new Blob(chunks, { type: mimeType });
         const downloadUrl = URL.createObjectURL(blob);
+        const fileName = `clipper-golden-moment-${Date.now()}.${fileExt}`;
         
         downloadBtn.href = downloadUrl;
-        downloadBtn.download = `clipper-golden-moment-${Date.now()}.webm`;
+        downloadBtn.download = fileName;
         downloadBtn.hidden = false;
 
         // Pemicu Unduh Otomatis
         const autoDownloadLink = document.createElement('a');
         autoDownloadLink.href = downloadUrl;
-        autoDownloadLink.download = `clipper-golden-moment-${Date.now()}.webm`;
+        autoDownloadLink.download = fileName;
         document.body.appendChild(autoDownloadLink);
         autoDownloadLink.click();
         document.body.removeChild(autoDownloadLink);
 
-        statusText.innerText = "🎉 Klip berhasil dipotong & file otomatis diunduh!";
+        statusText.innerText = `🎉 Klip format .${fileExt.toUpperCase()} berhasil dipotong & otomatis diunduh!`;
         exportBtn.disabled = false;
     };
 
